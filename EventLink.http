@@ -1,0 +1,12 @@
+@EventLink_HostAddress = https://localhost:7118
+
+
+POST {{EventLink_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "Username":"admin",
+  "Password":"admin123"
+}
+
+###
