@@ -69,6 +69,11 @@ namespace EventLink.Controllers
 
             var userId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
 
+            if(userId == evt.HostId)
+            {
+                return BadRequest("Host can't be an attendee of an event");
+            }
+
             var oldAttendDetails = await ctx.EventAttendees.FindAsync(userId, id);
 
             if (oldAttendDetails != null)
