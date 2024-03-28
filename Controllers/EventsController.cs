@@ -87,6 +87,13 @@ namespace EventLink.Controllers
                 return NotFound();
             }
 
+            var hostId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
+
+            if (hostId != evt.HostId)
+            {
+                return Unauthorized("Not the host");
+            }
+
             ctx.Events.Remove(evt);
             await ctx.SaveChangesAsync();
             return Accepted();
@@ -102,6 +109,13 @@ namespace EventLink.Controllers
             var evt = await ctx.Events.FindAsync(id);
 
             if (evt == null) return NotFound();
+
+            var hostId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
+
+            if(hostId != evt.HostId)
+            {
+                return Unauthorized("Not the host");
+            }
 
             evt.Name = newEvent.Name;
             evt.Description = newEvent.Description;
