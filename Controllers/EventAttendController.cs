@@ -1,7 +1,6 @@
 ﻿using EventLink.Data;
 using EventLink.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -9,6 +8,7 @@ using System.Security.Claims;
 namespace EventLink.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
     public class EventAttendController : ControllerBase
     {
@@ -20,8 +20,7 @@ namespace EventLink.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize]
-        public async Task<IActionResult> AllAttendees(int id, [FromQuery] bool complete)
+        public async Task<IActionResult> AllAttendees(int id)
         {
             var userId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
             var evt = await ctx.Events.FindAsync(id);
@@ -36,14 +35,9 @@ namespace EventLink.Controllers
                 .Include(ea => ea.Event)
                 .Where(ea => ea.EventId == id);
 
-            if (complete)
+            if (evt.HostId == userId)
             {
-                if(evt.HostId != userId)
-                {
-                    return NotFound("Not the host of the event");
-                }
-
-                var complete_detail_of_attendees = 
+                var complete_detail_of_attendees =
                     attendees
                     .Select(ea => new { ea.UserId, UserName = ea.User.Username, ea.User.Email })
                     .ToList();
@@ -57,7 +51,6 @@ namespace EventLink.Controllers
 
 
         [HttpPost("{id}")]
-        [Authorize]
         public async Task<IActionResult> AttendEvent(int id)
         {
             var evt = await ctx.Events.FindAsync(id);
@@ -69,7 +62,7 @@ namespace EventLink.Controllers
 
             var userId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
 
-            if(userId == evt.HostId)
+            if (userId == evt.HostId)
             {
                 return BadRequest("Host can't be an attendee of an event");
             }
@@ -100,7 +93,6 @@ namespace EventLink.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize]
         public async Task<IActionResult> RemoveAttendee(int id)
         {
             var evt = await ctx.Events.FindAsync(id);
@@ -117,7 +109,7 @@ namespace EventLink.Controllers
 
             if (oldAttendDetails == null)
             {
-                return BadRequest("No attendee details on this event");
+                return NotFound("No attendee details on this event");
             }
 
             ctx.EventAttendees.Remove(oldAttendDetails);
@@ -126,5 +118,36 @@ namespace EventLink.Controllers
             return Accepted("Deleted The Attendee from this Event");
         }
 
+
+        [HttpGet("/api/EventAttend/CheckAttending/{id}")]
+        public async Task<IActionResult> CheckAttending(int id)
+        {
+            var evt = await ctx.Events.FindAsync(id);
+
+            if (evt == null)
+            {
+                return NotFound("No such event");
+            }
+
+            var userId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
+
+
+            var attendingEvent = await ctx.EventAttendees.FindAsync(userId, id);
+
+            if (attendingEvent == null)
+            {
+                return NotFound(new
+                {
+                    Result = false,
+                    Message = "Not attending this event"
+                });
+            }
+
+            return Ok(new
+            {
+                Result = true,
+                Message = ""
+            });
+        }
     }
 }

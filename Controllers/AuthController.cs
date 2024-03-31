@@ -9,6 +9,8 @@ using System.Text;
 namespace EventLink.Controllers
 {
     using BCrypt.Net;
+    using Microsoft.Data.SqlClient;
+    using Microsoft.EntityFrameworkCore;
 
     [ApiController]
     [Route("[controller]")]
@@ -27,6 +29,13 @@ namespace EventLink.Controllers
         {
             if (!ModelState.IsValid) return BadRequest();
 
+            var doesUserExists = await context.Users.FirstOrDefaultAsync(u => u.Email == user.Email || u.Username == user.Username);
+
+            if (doesUserExists != null)
+            {
+                return BadRequest("User with that Email or Username Already Exists");
+            }
+
             context.Add(new User()
             {
                 Email = user.Email,
@@ -36,17 +45,44 @@ namespace EventLink.Controllers
                 Dob = user.Dob,
                 CreatedAt = DateTime.UtcNow,
             });
-
             try
             {
                 await context.SaveChangesAsync();
-                return Created();
-
+                return Ok(new AuthResponse
+                {
+                    Result = true,
+                    Token = ""
+                });
             }
-            catch (Exception ex)
+            catch (DbUpdateException e)
             {
-                return BadRequest(ex.Message);
+
+                if (e.InnerException?.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+                {
+                    return StatusCode(StatusCodes.Status409Conflict);
+                }
+                return BadRequest(e.Message);
             }
+        }
+
+        [HttpPost("/api/checkUser")]
+        public async Task<IActionResult> CheckUserByUserName([FromBody] string username)
+        {
+            if (!string.IsNullOrEmpty(username))
+            {
+                var tempUser = await context.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+                if (tempUser != null)
+                {
+                    return Ok("user exists");
+                }
+                else
+                {
+                    return NotFound();
+                }
+            }
+
+            return BadRequest();
         }
 
         [HttpPost("/api/login")]
@@ -63,8 +99,6 @@ namespace EventLink.Controllers
                     var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]));
                     var credentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
 
-                    Console.WriteLine(config["Jwt:Key"]);
-
                     var claims = new List<Claim>()
                     {
                         new(ClaimTypes.NameIdentifier, foundUser.Username),
@@ -76,11 +110,23 @@ namespace EventLink.Controllers
                         config["Jwt:Issuer"],
                         config["Jwt:Audience"],
                         claims,
-                        expires:DateTime.Now.AddHours(1),
+                        expires: DateTime.Now.AddHours(1),
                         signingCredentials: credentials
                     );
                     var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-                    return Ok(new { token = tokenString });
+                    return Ok(new AuthResponse
+                    {
+                        Result = true,
+                        Token = tokenString,
+                        User = new LoginResponseUser()
+                        {
+                            Id = foundUser.Id,
+                            Email = foundUser.Email,
+                            Username = foundUser.Username,
+                            Bio = foundUser.Bio,
+                            Dob = foundUser.Dob,
+                        }
+                    });
                 }
             }
 

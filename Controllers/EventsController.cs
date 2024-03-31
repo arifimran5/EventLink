@@ -1,8 +1,8 @@
 ﻿using EventLink.Data;
 using EventLink.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace EventLink.Controllers
@@ -30,14 +30,43 @@ namespace EventLink.Controllers
                 return Ok(userEvents);
             }
 
-            return Ok(ctx.Events);
+            var events = ctx.Events
+                .Include(e => e.Host)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Name,
+                    e.Description,
+                    e.ImgUrl,
+                    e.Link,
+                    e.Date,
+                    e.CreatedAt,
+                    e.HostId,
+                    Hostname = e.Host.Username,
+                });
+
+            return Ok(events);
         }
 
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetEvent(int id)
         {
-            var evt = await ctx.Events.FindAsync(id);
+            var evt = await ctx.Events
+                .Include(e => e.Host)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Name,
+                    e.Description,
+                    e.ImgUrl,
+                    e.Link,
+                    e.Date,
+                    e.CreatedAt,
+                    e.HostId,
+                    Hostname = e.Host.Username,
+                })
+                .FirstAsync(e => e.Id == id);
 
             if (evt == null) return NotFound();
 
@@ -82,7 +111,7 @@ namespace EventLink.Controllers
         {
             var evt = await ctx.Events.FindAsync(id);
 
-            if(evt == null)
+            if (evt == null)
             {
                 return NotFound();
             }
@@ -102,7 +131,7 @@ namespace EventLink.Controllers
 
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<IActionResult> UpdateEvent([FromRoute]int id, [FromBody] CreateEvent newEvent)
+        public async Task<IActionResult> UpdateEvent([FromRoute] int id, [FromBody] CreateEvent newEvent)
         {
             if (!ModelState.IsValid) return BadRequest("Check the model of data");
 
@@ -112,7 +141,7 @@ namespace EventLink.Controllers
 
             var hostId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
 
-            if(hostId != evt.HostId)
+            if (hostId != evt.HostId)
             {
                 return Unauthorized("Not the host");
             }
@@ -123,7 +152,7 @@ namespace EventLink.Controllers
             evt.CreatedAt = DateTime.UtcNow;
             evt.ImgUrl = newEvent.ImgUrl;
             evt.Date = newEvent.Date;
-            
+
             try
             {
                 await ctx.SaveChangesAsync();

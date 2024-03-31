@@ -11,7 +11,7 @@ namespace EventLink.Models
 
         [StringLength(100, ErrorMessage = "Bio length can't be more than 100.")]
         public string? Bio { get; set; }
-        public DateOnly? Dob { get; set; }
+        public DateTime? Dob { get; set; }
 
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
@@ -24,7 +24,7 @@ namespace EventLink.Models
     {
         public string Username { get; set; } = string.Empty;
         public string? Bio { get; set; }
-        public DateOnly? Dob { get; set; }
+        public DateTime? Dob { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
     }
@@ -33,5 +33,21 @@ namespace EventLink.Models
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class CheckUser
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+
+    }
+
+    public class LoginResponseUser
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string? Bio { get; set; }
+        public DateTime? Dob { get; set; }
+        public string Email { get; set; } = string.Empty;
     }
 }

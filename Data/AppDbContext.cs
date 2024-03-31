@@ -19,6 +19,9 @@ namespace EventLink.Data
                 .WithOne(e => e.Host)
                 .HasForeignKey(e => e.HostId);
 
+            modelBuilder.Entity<User>()
+                .HasAlternateKey(u => u.Username);
+
             modelBuilder.Entity<Event>()
                 .HasMany(e => e.Attendees)
                 .WithOne(ea => ea.Event)

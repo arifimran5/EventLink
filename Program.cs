@@ -7,7 +7,8 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
-builder.Services.AddDbContext<AppDbContext>(options => {
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
     options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=EventLinkDev;Trusted_Connection=true");
 });
 
@@ -17,7 +18,8 @@ builder.Services.AddAuthentication(opt =>
     opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(opt =>
 {
-    opt.TokenValidationParameters = new TokenValidationParameters() {
+    opt.TokenValidationParameters = new TokenValidationParameters()
+    {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
@@ -28,12 +30,24 @@ builder.Services.AddAuthentication(opt =>
     };
 });
 
+builder.Services.AddCors(opt =>
+{
+    opt.AddPolicy("AngularFrontend", (opt) =>
+    {
+        opt.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();
 
+app.UseCors("AngularFrontend");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 
 app.MapControllers();
 
