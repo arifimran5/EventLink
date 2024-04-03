@@ -119,7 +119,7 @@ namespace EventLink.Controllers
         }
 
 
-        [HttpGet("/api/EventAttend/CheckAttending/{id}")]
+        [HttpGet("CheckAttending/{id}")]
         public async Task<IActionResult> CheckAttending(int id)
         {
             var evt = await ctx.Events.FindAsync(id);
@@ -136,7 +136,7 @@ namespace EventLink.Controllers
 
             if (attendingEvent == null)
             {
-                return NotFound(new
+                return Ok(new
                 {
                     Result = false,
                     Message = "Not attending this event"

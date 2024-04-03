@@ -37,8 +37,7 @@ namespace EventLink.Controllers
                     e.Id,
                     e.Name,
                     e.Description,
-                    e.ImgUrl,
-                    e.Link,
+                    e.Image,
                     e.Date,
                     e.CreatedAt,
                     e.HostId,
@@ -59,8 +58,7 @@ namespace EventLink.Controllers
                     e.Id,
                     e.Name,
                     e.Description,
-                    e.ImgUrl,
-                    e.Link,
+                    e.Image,
                     e.Date,
                     e.CreatedAt,
                     e.HostId,
@@ -75,20 +73,46 @@ namespace EventLink.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> CreateEvent([FromBody] CreateEvent newEvent)
+        public async Task<IActionResult> CreateEvent([FromForm] CreateEvent newEvent)
         {
             if (!ModelState.IsValid) return BadRequest("Check the model of data");
 
             var hostId = Convert.ToInt32(HttpContext.User.FindFirstValue("UserId"));
 
+            var image = newEvent.Image;
+            var extension = Path.GetExtension(image.FileName).ToLower();
+
+            List<string> validExtension = [".png", ".jpeg", ".jpg"];
+
+            if (validExtension.IndexOf(extension) == -1)
+            {
+                return BadRequest("Image extension not allowed");
+            }
+
+            if (image.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest("Image size should be less than 5MB");
+            }
+
+            var fileName = Guid.NewGuid().ToString() + extension;
+            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "Events", fileName);
+
+            using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                await image.CopyToAsync(stream);
+            }
+
+            var finalImagePath = Path.Combine("Events", fileName);
+
+
+
             var evt = new Event()
             {
                 Name = newEvent.Name,
                 Description = newEvent.Description,
-                Link = newEvent.Link,
                 HostId = hostId,
                 CreatedAt = DateTime.UtcNow,
-                ImgUrl = newEvent.ImgUrl,
+                Image = finalImagePath,
                 Date = newEvent.Date
             };
 
@@ -148,9 +172,8 @@ namespace EventLink.Controllers
 
             evt.Name = newEvent.Name;
             evt.Description = newEvent.Description;
-            evt.Link = newEvent.Link;
             evt.CreatedAt = DateTime.UtcNow;
-            evt.ImgUrl = newEvent.ImgUrl;
+            evt.Image = ""; // TODO
             evt.Date = newEvent.Date;
 
             try

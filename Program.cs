@@ -1,6 +1,7 @@
 using EventLink.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -40,6 +41,13 @@ builder.Services.AddCors(opt =>
 
 
 var app = builder.Build();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "Assets")),
+    RequestPath = "/assets"
+});
 
 app.UseHttpsRedirection();
 
